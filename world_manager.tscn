@@ -1,29 +1,26 @@
 [gd_scene format=3 uid="uid://n5hk00hurjs"]
 
-[ext_resource type="Script" uid="uid://bjq8w2nrd0c7j" path="res://manager_backup.gd" id="1_37kqa"]
-[ext_resource type="Texture2D" uid="uid://dll73nmuxhh74" path="res://assets/nebula-low-02.exr" id="2_37kqa"]
+[ext_resource type="Script" uid="uid://c6u1eq5lbqvqs" path="res://world_manager.gd" id="1_manager"]
+[ext_resource type="Script" uid="uid://hgw768i54301" path="res://world_view.gd" id="2_view"]
+[ext_resource type="Script" uid="uid://b2uiekphksldd" path="res://hud.gd" id="3_hud"]
 
-[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_n7g33"]
-panorama = ExtResource("2_37kqa")
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 
-[sub_resource type="Sky" id="Sky_1wgem"]
-sky_material = SubResource("PanoramaSkyMaterial_n7g33")
-process_mode = 1
-radiance_size = 0
+[sub_resource type="Sky" id="Sky_main"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
 
-[sub_resource type="Environment" id="Environment_568mj"]
+[sub_resource type="Environment" id="Environment_main"]
 background_mode = 2
-sky = SubResource("Sky_1wgem")
+sky = SubResource("Sky_main")
 
-[node name="WorldManager" type="Node3D" unique_id=707645813]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5210433, 0)
-script = ExtResource("1_37kqa")
-dist_to_closest_water = 4.123105625617661
-dist_to_closest_plant = 1.0
-dist_to_closest_tree = 1.4142135623730951
-dist_to_closest_small_rock = 1.4142135623730951
-dist_to_closest_big_rock = 2.0
-world_seed = 53
+[node name="WorldManager" type="Node3D" unique_id=318321810]
+script = ExtResource("1_manager")
+dist_to_closest_water = 1.0
+dist_to_closest_plant = 3.1622776601683795
+dist_to_closest_tree = 2.0
+dist_to_closest_small_rock = 1.0
+dist_to_closest_big_rock = 5.385164807134504
+world_seed = 71
 percent_map_empty = 56.0
 weight_water = 5.0
 weight_plants = 5.0
@@ -33,47 +30,52 @@ forest_shaping = 0.085
 water_shaping = 0.027
 mountain_shaping = 0.5
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=24805910]
-transform = Transform3D(0.70710677, 0.47771433, -0.5213338, 0, 0.73727727, 0.67559016, 0.70710677, -0.47771433, 0.5213338, -10.015, 19.695, 24.61)
-fov = 36.9
-near = 0.016
+[node name="WorldView" type="Node3D" parent="." unique_id=503717992]
+script = ExtResource("2_view")
 
-[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1805174799]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1965539451]
+transform = Transform3D(-1, 7.9231945e-08, -3.694646e-08, 0, 0.42261824, 0.9063078, 8.742278e-08, 0.9063078, -0.42261824, 13.16, 14, -0.02)
+fov = 63.3
 
-[node name="UI" type="Control" parent="CanvasLayer" unique_id=1317359913]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=127070159]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.8660254, 0, -0.8660254, 0.5, 0, 10, 0)
 
-[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/UI" unique_id=1277904962]
-custom_minimum_size = Vector2(340, 420)
-layout_mode = 1
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1534953551]
+environment = SubResource("Environment_main")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/UI/PanelContainer" unique_id=1860962422]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1763052577]
+script = ExtResource("3_hud")
+
+[node name="Panel" type="PanelContainer" parent="HUD" unique_id=407634705]
+custom_minimum_size = Vector2(340, 0)
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 350.0
+offset_bottom = 50.0
+
+[node name="Text" type="RichTextLabel" parent="HUD/Panel" unique_id=31884090]
 layout_mode = 2
-
-[node name="StorageStatsLabel" type="Label" parent="CanvasLayer/UI/PanelContainer/VBoxContainer" unique_id=68837016]
-layout_mode = 2
-
-[node name="AgentStatsLabel" type="Label" parent="CanvasLayer/UI/PanelContainer/VBoxContainer" unique_id=718976270]
-layout_mode = 2
-text = "=== AGENT STATUS ===
-Position: (7, 8)
+bbcode_enabled = true
+text = "=== AGENT STATUS ([color=green]ALIVE[/color]) ===
+Position: (8, 7)
 Energy: 100.0 / 100
-Satiety (Food): 100.0 / 100
-Hydration (Water): 100.0 / 100
-Inventory: [] (Limit: 3)"
+Food: 100.0 / 100
+Water: 100.0 / 100
+Inventory: [] (Max: 3)
 
-[node name="ActionMenuLabel" type="Label" parent="CanvasLayer/UI/PanelContainer/VBoxContainer" unique_id=1179071738]
-unique_name_in_owner = true
-layout_mode = 2
+=== CENTRAL STORAGE (Cap: 10) ===
+Water: 0 | Food: 0
+Wood: 0 | Stone: 0
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=913047003]
-transform = Transform3D(0.9170601, 0.28195816, -0.28195816, 0, 0.70710677, 0.70710677, 0.39874908, -0.6484594, 0.6484594, 0, 6.972, 0)
-light_energy = 3.415
+=== STRUCTURES ===
+Huts built: 1
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=931960560]
-environment = SubResource("Environment_568mj")
+=== AVAILABLE ACTIONS ===
+   [color=#0099ff]1: Collect Water[/color]
+   [color=#54ff00]2: Harvest Plant[/color]
+   [color=#ffcc00]3: Deposit Items[/color]
+   [color=#ffffff]4: Rest / Wait[/color]
+
+"
+fit_content = true
+scroll_active = false

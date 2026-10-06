@@ -1,93 +1,77 @@
 class_name WorldGenerator
 extends RefCounted
+# Deterministic world generation (same seed + settings = same world).
+# Each tile type claims the free cells with the highest noise value, which
+# forms natural clusters (lakes, forests, mountains).
 
-const WATER := "WATER"
-const PLANT := "PLANT"
-const TREE := "TREE"
-const SMALL_ROCK := "SMALL_ROCK"
-const BIG_ROCK := "BIG_ROCK"
+# tile type -> [shaping key, seed offset]
+# Types sharing a layer use the same noise field. Dictionary order = placement
+# order, so water gets the first pick and plants the last.
+const LAYERS := {
+	"WATER": ["water", 0],
+	"BIG_ROCK": ["mountain", 2],
+	"SMALL_ROCK": ["mountain", 2],
+	"TREE": ["forest", 1],
+	"PLANT": ["forest", 1],
+}
 
-static func generate(p: Dictionary) -> Dictionary:
-	var width: int = p["width"]
-	var height: int = p["height"]
-	var world_seed: int = p["seed"]
-	var percent_empty: float = p["percent_empty"]
-	var weights: Dictionary = p["weights"]
-	var shaping: Dictionary = p["shaping"]
 
+# params: width, height, seed, percent_empty,
+#         weights (tile type -> weight), shaping (water/forest/mountain -> noise frequency)
+# Returns a Dictionary: Vector2i -> tile type. Missing cells are empty.
+static func generate(params: Dictionary) -> Dictionary:
+	var width: int = params["width"]
+	var height: int = params["height"]
+	var weights: Dictionary = params["weights"]
+	var occupied := {}
+
+	# Number of cells that may hold objects, split by weight ratio
 	var total_cells := width * height
-	var occupied: Dictionary = {}
+	var object_cells: int = total_cells - roundi(params["percent_empty"] / 100.0 * total_cells)
+	var total_weight := 0.0
+	for type: String in weights:
+		total_weight += weights[type]
+	if total_weight <= 0.0 or object_cells <= 0:
+		return occupied
 
-	var empty_cells_count := roundi((percent_empty / 100.0) * total_cells)
-	var available_object_cells := total_cells - empty_cells_count
-
-	var total_weight: float = weights["water"] + weights["plants"] + weights["trees"] + weights["small_rocks"] + weights["big_rocks"]
-
-	var count_water := 0
-	var count_plants := 0
-	var count_trees := 0
-	var count_small_rocks := 0
-	var count_big_rocks := 0
-
-	if total_weight > 0 and available_object_cells > 0:
-		count_water = roundi((weights["water"] / total_weight) * available_object_cells)
-		count_plants = roundi((weights["plants"] / total_weight) * available_object_cells)
-		count_trees = roundi((weights["trees"] / total_weight) * available_object_cells)
-		count_small_rocks = roundi((weights["small_rocks"] / total_weight) * available_object_cells)
-		count_big_rocks = roundi((weights["big_rocks"] / total_weight) * available_object_cells)
-
-	var water_noise := FastNoiseLite.new()
-	water_noise.seed = world_seed
-	water_noise.frequency = shaping["water"]
-
-	var tree_noise := FastNoiseLite.new()
-	tree_noise.seed = world_seed + 1
-	tree_noise.frequency = shaping["forest"]
-
-	var rock_noise := FastNoiseLite.new()
-	rock_noise.seed = world_seed + 2
-	rock_noise.frequency = shaping["mountain"]
-
-	_place(occupied, WATER, count_water, water_noise, width, height)
-	_place(occupied, BIG_ROCK, count_big_rocks, rock_noise, width, height)
-	_place(occupied, SMALL_ROCK, count_small_rocks, rock_noise, width, height)
-	_place(occupied, TREE, count_trees, tree_noise, width, height)
-	_place(occupied, PLANT, count_plants, tree_noise, width, height)
-
+	for type: String in LAYERS:
+		var noise := FastNoiseLite.new()
+		noise.seed = params["seed"] + LAYERS[type][1]
+		noise.frequency = params["shaping"][LAYERS[type][0]]
+		var count := roundi(weights[type] / total_weight * object_cells)
+		var ranked := _rank_free_cells(noise, occupied, width, height)
+		for i in mini(count, ranked.size()):
+			occupied[ranked[i]] = type
 	return occupied
 
+
+# Free cell closest to the map center (the agent's spawn and first hut).
+@warning_ignore("integer_division")
 static func find_start_cell(occupied: Dictionary, width: int, height: int) -> Vector2i:
 	var center := Vector2i(width / 2, height / 2)
 	var best := center
-	var best_sq := -1
-	for x in range(width):
-		for z in range(height):
-			var pos := Vector2i(x, z)
+	var best_dist := INF
+	for x in width:
+		for y in height:
+			var pos := Vector2i(x, y)
 			if occupied.has(pos): continue
-			var dx := x - center.x
-			var dz := z - center.y
-			var sq := dx * dx + dz * dz
-			if best_sq < 0 or sq < best_sq:
-				best_sq = sq
+			var dist := (pos - center).length_squared()
+			if dist < best_dist:
 				best = pos
+				best_dist = dist
 	return best
 
-static func _place(occupied: Dictionary, type: String, count: int, noise: FastNoiseLite, width: int, height: int) -> void:
-	if count <= 0: return
-	var locations := _best_locations(noise, occupied, width, height)
-	for i in range(mini(count, locations.size())):
-		occupied[locations[i]] = type
 
-static func _best_locations(noise: FastNoiseLite, occupied: Dictionary, width: int, height: int) -> Array[Vector2i]:
-	var candidates: Array[Vector3] = []
-	for x in range(width):
-		for z in range(height):
-			if not occupied.has(Vector2i(x, z)):
-				candidates.append(Vector3(noise.get_noise_2d(x, z), x, z))
-	candidates.sort_custom(func(a: Vector3, b: Vector3) -> bool: return a.x > b.x)
+# All free cells, sorted by noise value (highest first).
+static func _rank_free_cells(noise: FastNoiseLite, occupied: Dictionary, width: int, height: int) -> Array[Vector2i]:
+	var scored: Array[Vector3] = []  # (noise value, x, y)
+	for x in width:
+		for y in height:
+			if not occupied.has(Vector2i(x, y)):
+				scored.append(Vector3(noise.get_noise_2d(x, y), x, y))
+	scored.sort_custom(func(a: Vector3, b: Vector3) -> bool: return a.x > b.x)
 
-	var result: Array[Vector2i] = []
-	result.resize(candidates.size())
-	for i in range(candidates.size()):
-		result[i] = Vector2i(int(candidates[i].y), int(candidates[i].z))
-	return result
+	var cells: Array[Vector2i] = []
+	for s in scored:
+		cells.append(Vector2i(int(s.y), int(s.z)))
+	return cells
