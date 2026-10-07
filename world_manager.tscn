@@ -1,10 +1,18 @@
 [gd_scene format=3 uid="uid://n5hk00hurjs"]
 
-[ext_resource type="Script" uid="uid://c6u1eq5lbqvqs" path="res://world_manager.gd" id="1_manager"]
-[ext_resource type="Script" uid="uid://hgw768i54301" path="res://world_view.gd" id="2_view"]
-[ext_resource type="Script" uid="uid://b2uiekphksldd" path="res://hud.gd" id="3_hud"]
+[ext_resource type="Script" path="res://world_manager.gd" id="1_manager"]
+[ext_resource type="Script" path="res://world_view.gd" id="2_view"]
+[ext_resource type="Script" path="res://hud.gd" id="3_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_top_color = Color(0.22, 0.46, 0.84, 1)
+sky_horizon_color = Color(0.72, 0.85, 0.96, 1)
+sky_curve = 0.2
+ground_bottom_color = Color(0.27, 0.46, 0.19, 1)
+ground_horizon_color = Color(0.72, 0.85, 0.96, 1)
+ground_curve = 0.05
+sun_angle_max = 20.0
+sun_curve = 0.2
 
 [sub_resource type="Sky" id="Sky_main"]
 sky_material = SubResource("ProceduralSkyMaterial_sky")
@@ -12,15 +20,15 @@ sky_material = SubResource("ProceduralSkyMaterial_sky")
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 2
 sky = SubResource("Sky_main")
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.72, 0.85, 0.96, 1)
+fog_density = 0.006
+fog_sky_affect = 0.0
 
-[node name="WorldManager" type="Node3D" unique_id=318321810]
+[node name="WorldManager" type="Node3D"]
 script = ExtResource("1_manager")
-dist_to_closest_water = 1.0
-dist_to_closest_plant = 3.1622776601683795
-dist_to_closest_tree = 2.0
-dist_to_closest_small_rock = 1.0
-dist_to_closest_big_rock = 5.385164807134504
-world_seed = 71
+world_seed = 54
 percent_map_empty = 56.0
 weight_water = 5.0
 weight_plants = 5.0
@@ -30,52 +38,22 @@ forest_shaping = 0.085
 water_shaping = 0.027
 mountain_shaping = 0.5
 
-[node name="WorldView" type="Node3D" parent="." unique_id=503717992]
+[node name="WorldView" type="Node3D" parent="."]
 script = ExtResource("2_view")
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=1965539451]
-transform = Transform3D(-1, 7.9231945e-08, -3.694646e-08, 0, 0.42261824, 0.9063078, 8.742278e-08, 0.9063078, -0.42261824, 13.16, 14, -0.02)
-fov = 63.3
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 0.9135, 0.4067, 0, 0.4067, -0.9135, 7.5, 8, -10)
+fov = 60.0
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=127070159]
-transform = Transform3D(1, 0, 0, 0, 0.5, 0.8660254, 0, -0.8660254, 0.5, 0, 10, 0)
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.8296, 0, 0.5584, 0.4356, 0.6268, 0.6471, -0.35, 0.78, -0.52, 0, 10, 0)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 1.2
+shadow_enabled = true
+directional_shadow_max_distance = 60.0
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1534953551]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")
 
-[node name="HUD" type="CanvasLayer" parent="." unique_id=1763052577]
+[node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("3_hud")
-
-[node name="Panel" type="PanelContainer" parent="HUD" unique_id=407634705]
-custom_minimum_size = Vector2(340, 0)
-offset_left = 10.0
-offset_top = 10.0
-offset_right = 350.0
-offset_bottom = 50.0
-
-[node name="Text" type="RichTextLabel" parent="HUD/Panel" unique_id=31884090]
-layout_mode = 2
-bbcode_enabled = true
-text = "=== AGENT STATUS ([color=green]ALIVE[/color]) ===
-Position: (8, 7)
-Energy: 100.0 / 100
-Food: 100.0 / 100
-Water: 100.0 / 100
-Inventory: [] (Max: 3)
-
-=== CENTRAL STORAGE (Cap: 10) ===
-Water: 0 | Food: 0
-Wood: 0 | Stone: 0
-
-=== STRUCTURES ===
-Huts built: 1
-
-=== AVAILABLE ACTIONS ===
-   [color=#0099ff]1: Collect Water[/color]
-   [color=#54ff00]2: Harvest Plant[/color]
-   [color=#ffcc00]3: Deposit Items[/color]
-   [color=#ffffff]4: Rest / Wait[/color]
-
-"
-fit_content = true
-scroll_active = false

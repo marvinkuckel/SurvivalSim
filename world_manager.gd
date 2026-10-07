@@ -81,7 +81,7 @@ func generate_world() -> void:
 	})
 	var start := WorldGenerator.find_start_cell(cells, map_width, map_height)
 	sim_core = SimulationCore.new(cells, start)
-	view.build(cells, start)
+	view.build(cells, start, map_width, map_height)
 	_sync()
 
 
@@ -124,6 +124,6 @@ func _respawn() -> void:
 	hud.refresh(sim_core, "The agent died.", true)
 	await get_tree().create_timer(1.5).timeout
 	sim_core.reset()
-	view.build(cells, sim_core.spawn_point)
+	view.build(cells, sim_core.spawn_point, map_width, map_height)
 	is_resetting = false
 	_sync("Respawned.")
