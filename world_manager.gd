@@ -1,7 +1,9 @@
 @tool
 extends Node3D
-# Entry point. Holds the editor settings, generates the world and routes
-# input between the simulation core, the 3D view and the HUD.
+# Entry point. Holds the editor settings, generates the world and connects the
+# simulation core, the 3D view and the HUD (the HUD buttons trigger the actions).
+
+const Tile = GameConfig.Tile
 
 @onready var view: WorldView = $WorldView
 @onready var hud: Hud = $HUD
@@ -11,7 +13,7 @@ extends Node3D
 @export var generate_world_now: bool = false:  # acts as a "generate" button
 	set(_v): generate_world()
 
-@export_category("1. Distance Monitor (Live)")
+@export_category("1. Distance Monitor (Live, in steps, -1 = unreachable)")
 @export var dist_to_closest_water: float = 0.0
 @export var dist_to_closest_plant: float = 0.0
 @export var dist_to_closest_tree: float = 0.0
@@ -51,11 +53,12 @@ extends Node3D
 	set(v): mountain_shaping = v; _on_setting_changed()
 
 var sim_core: SimulationCore
-var cells: Dictionary = {}  # generated world: Vector2i -> tile type
-var is_resetting := false   # true while the death/respawn pause is running
+var is_resetting := false  # true while the end-of-run pause is running
 
 
 func _ready() -> void:
+	if not hud.action_pressed.is_connected(_on_action_pressed):
+		hud.action_pressed.connect(_on_action_pressed)
 	generate_world()
 
 
@@ -68,62 +71,54 @@ func _on_setting_changed() -> void:
 func generate_world() -> void:
 	if not is_node_ready(): return  # exported setters also fire while the scene loads
 
-	cells = WorldGenerator.generate({
+	var tiles := WorldGenerator.generate({
 		"width": map_width,
 		"height": map_height,
 		"seed": world_seed,
 		"percent_empty": percent_map_empty,
 		"weights": {
-			"WATER": weight_water, "PLANT": weight_plants, "TREE": weight_trees,
-			"SMALL_ROCK": weight_small_rocks, "BIG_ROCK": weight_big_rocks,
+			Tile.WATER: weight_water, Tile.PLANT: weight_plants, Tile.TREE: weight_trees,
+			Tile.SMALL_ROCK: weight_small_rocks, Tile.BIG_ROCK: weight_big_rocks,
 		},
 		"shaping": {"water": water_shaping, "forest": forest_shaping, "mountain": mountain_shaping},
 	})
-	var start := WorldGenerator.find_start_cell(cells, map_width, map_height)
-	sim_core = SimulationCore.new(cells, start)
-	view.build(cells, start, map_width, map_height)
+	var start := WorldGenerator.find_start_cell(tiles, map_width, map_height)
+	sim_core = SimulationCore.new(tiles, map_width, map_height, start, world_seed)
+	view.build(sim_core)
 	_sync()
 
 
 # Pushes the current simulation state to the view, the monitor and the HUD.
 func _sync(message := "") -> void:
-	view.sync_with(sim_core)
-	dist_to_closest_water = sim_core.get_closest_interaction("WATER")["distance"]
-	dist_to_closest_plant = sim_core.get_closest_interaction("PLANT")["distance"]
-	dist_to_closest_tree = sim_core.get_closest_interaction("TREE")["distance"]
-	dist_to_closest_small_rock = sim_core.get_closest_interaction("SMALL_ROCK")["distance"]
-	dist_to_closest_big_rock = sim_core.get_closest_interaction("BIG_ROCK")["distance"]
-	hud.refresh(sim_core, message)
+	var plans := sim_core.get_plans()
+	view.sync_with(sim_core, plans)
+	dist_to_closest_water = sim_core.steps_to([Tile.WATER, Tile.WELL])
+	dist_to_closest_plant = sim_core.steps_to([Tile.PLANT])
+	dist_to_closest_tree = sim_core.steps_to([Tile.TREE])
+	dist_to_closest_small_rock = sim_core.steps_to([Tile.SMALL_ROCK])
+	dist_to_closest_big_rock = sim_core.steps_to([Tile.BIG_ROCK])
+	hud.refresh(sim_core, plans, message)
 
 
-# Keys 1-4 trigger the agent actions (disabled in the editor).
-func _unhandled_key_input(event: InputEvent) -> void:
-	var key := event as InputEventKey
-	if Engine.is_editor_hint() or is_resetting or key == null or not key.pressed or key.echo:
-		return
+# A dock button was pressed (disabled in the editor).
+func _on_action_pressed(action: String) -> void:
+	if Engine.is_editor_hint() or is_resetting: return
 
-	var message := ""
-	match key.keycode:
-		KEY_1: message = sim_core.collect_water()
-		KEY_2: message = sim_core.harvest_plant()
-		KEY_3: message = sim_core.store_inventory_in_hut()
-		KEY_4: message = sim_core.wait_and_rest()
-		_: return
-
-	hud.flash(key.keycode - KEY_1)
-	if message == "DEAD" or message == "DIED":
-		_respawn()
+	var message := sim_core.perform(action)
+	if message == "DIED" or message == "FINISHED" or message == "DEAD":
+		_end_run(message)
 	else:
 		print("[Simulation Event]: ", message)
 		_sync(message)
 
 
-# Short pause after death, then the whole simulation (agent and world) restarts.
-func _respawn() -> void:
+# Short pause after the run ended (death or day limit), then everything restarts.
+func _end_run(reason: String) -> void:
 	is_resetting = true
-	hud.refresh(sim_core, "The agent died.", true)
-	await get_tree().create_timer(1.5).timeout
+	var text := "Day limit reached!" if reason == "FINISHED" else "The agent died on day %d!" % sim_core.day
+	hud.refresh(sim_core, sim_core.get_plans(), "%s Final score: %d" % [text, sim_core.score], true)
+	await get_tree().create_timer(2.5).timeout
 	sim_core.reset()
-	view.build(cells, sim_core.spawn_point, map_width, map_height)
+	view.build(sim_core)
 	is_resetting = false
-	_sync("Respawned.")
+	_sync("New run started.")

@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://n5hk00hurjs"]
 
-[ext_resource type="Script" path="res://world_manager.gd" id="1_manager"]
-[ext_resource type="Script" path="res://world_view.gd" id="2_view"]
-[ext_resource type="Script" path="res://hud.gd" id="3_hud"]
+[ext_resource type="Script" uid="uid://c6u1eq5lbqvqs" path="res://world_manager.gd" id="1_manager"]
+[ext_resource type="Script" uid="uid://hgw768i54301" path="res://world_view.gd" id="2_view"]
+[ext_resource type="Script" uid="uid://b2uiekphksldd" path="res://hud.gd" id="3_hud"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.22, 0.46, 0.84, 1)
@@ -26,8 +26,11 @@ fog_light_color = Color(0.72, 0.85, 0.96, 1)
 fog_density = 0.006
 fog_sky_affect = 0.0
 
-[node name="WorldManager" type="Node3D"]
+[node name="WorldManager" type="Node3D" unique_id=954384312]
 script = ExtResource("1_manager")
+dist_to_closest_water = 7.0
+dist_to_closest_plant = 1.0
+dist_to_closest_small_rock = 2.0
 world_seed = 54
 percent_map_empty = 56.0
 weight_water = 5.0
@@ -38,22 +41,22 @@ forest_shaping = 0.085
 water_shaping = 0.027
 mountain_shaping = 0.5
 
-[node name="WorldView" type="Node3D" parent="."]
+[node name="WorldView" type="Node3D" parent="." unique_id=1295998877]
 script = ExtResource("2_view")
 
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1188680076]
 transform = Transform3D(-1, 0, 0, 0, 0.9135, 0.4067, 0, 0.4067, -0.9135, 7.5, 8, -10)
 fov = 60.0
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2013064440]
 transform = Transform3D(-0.8296, 0, 0.5584, 0.4356, 0.6268, 0.6471, -0.35, 0.78, -0.52, 0, 10, 0)
 light_color = Color(1, 0.96, 0.88, 1)
 light_energy = 1.2
 shadow_enabled = true
 directional_shadow_max_distance = 60.0
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=363078449]
 environment = SubResource("Environment_main")
 
-[node name="HUD" type="CanvasLayer" parent="."]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=46895595]
 script = ExtResource("3_hud")
